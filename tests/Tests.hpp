@@ -52,5 +52,6 @@ void RunStringTests();
 void RunSubtreeTests();
 void RunInterfaceTests();
 void RunTypeTests();
+void RunDictionaryTests();
 
 void RunAllTests();

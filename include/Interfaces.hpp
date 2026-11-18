@@ -27,3 +27,14 @@ public:
     virtual ~IEnumerable() = default;
     virtual std::unique_ptr<IEnumerator<T>> GetEnumerator() const = 0;
 };
+
+template <typename TKey, typename TValue>
+class IDictionary {
+public:
+    virtual ~IDictionary() = default;
+    virtual size_t GetCount() const = 0;
+    virtual bool ContainsKey(const TKey& key) const = 0;
+    virtual const TValue& Get(const TKey& key) const = 0;
+    virtual void Add(const TKey& key, const TValue& value) = 0;
+    virtual void Remove(const TKey& key) = 0;
+};

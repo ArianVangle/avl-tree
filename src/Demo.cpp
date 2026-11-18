@@ -1,20 +1,14 @@
 #include "Demo.hpp"
 
 #include <complex>
-#include <functional>
 #include <string>
 
 #include "BinaryTree.hpp"
 #include "Console.hpp"
+#include "Dictionary.hpp"
 #include "Person.hpp"
 
 namespace {
-
-struct ByModulus {
-    bool operator()(const std::complex<double>& a, const std::complex<double>& b) const {
-        return std::abs(a) < std::abs(b);
-    }
-};
 
 using Function = int (*)(int);
 
@@ -27,7 +21,7 @@ int Square(int x) { return x * x; }
 void DemoTypes() {
     DrawWindow("Другие типы элементов");
 
-    SayHeader("вещественные числа");
+    SayHeader("дерево вещественных чисел");
     BinaryTree<double> doubles;
     for (double x : {3.14, -2.5, 10.0, 0.5}) {
         doubles.Insert(x);
@@ -35,40 +29,48 @@ void DemoTypes() {
     Say("дерево: " + doubles.ToString());
     Say("map x/2: " + doubles.Map([](double x) { return x / 2; }).ToString());
 
-    SayHeader("комплексные числа (сравнение по модулю)");
-    BinaryTree<std::complex<double>, ByModulus> complexes;
-    for (auto z : {std::complex<double>(3, 4), std::complex<double>(1, 1),
-                   std::complex<double>(0, 10)}) {
-        complexes.Insert(z);
-    }
-    Say("дерево: " + complexes.ToString("<К>(Л)[П]"));
-
-    SayHeader("строки");
+    SayHeader("дерево строк");
     BinaryTree<std::string> words;
     for (const char* word : {"липа", "берёза", "сосна", "ель"}) {
         words.Insert(word);
     }
     Say("дерево: " + words.ToString());
 
-    SayHeader("функции (указатели на функции)");
-    BinaryTree<Function, std::less<Function>> functions;
-    for (Function f : {AddOne, Twice, Square}) {
-        functions.Insert(f);
-    }
-    int sum = functions.Reduce([](Function f, int acc) { return acc + f(5); }, 0);
-    Say("в дереве функций: " + std::to_string(functions.GetCount()) +
-        " (x+1, 2x, x²), есть ли 2x: " + (functions.Contains(Twice) ? "да" : "нет"));
-    Say("reduce: сумма f(5) по всем функциям = " + std::to_string(sum));
+    SayHeader("словарь комплексных чисел (ключ — номер)");
+    
+    Dictionary<int, std::complex<double>> numbers;
+    numbers.Add(2, {3, 4});
+    numbers.Add(1, {1, 1});
+    numbers.Add(3, {0, 10});
 
-    SayHeader("студенты и преподаватели (порядок по номеру)");
-    BinaryTree<Student> students;
-    students.Insert({{1003, "Иванов Иван"}});
-    students.Insert({{1001, "Петрова Анна"}});
-    students.Insert({{1002, "Сидоров Пётр"}});
-    Say("студенты: " + students.ToString());
-    BinaryTree<Teacher> teachers;
-    teachers.Insert({{20, "Смирнов С. С."}});
-    teachers.Insert({{10, "Кузнецова К. К."}});
-    Say("преподаватели: " + teachers.ToString());
+    for (int key = 1; key <= 3; ++key) {
+        Say(std::to_string(key) + " → " + ValueToText(numbers.Get(key)));
+    }
+
+    SayHeader("словарь функций (ключ — название)");
+
+    Dictionary<std::string, Function> functions;
+    functions.Add("x+1", AddOne);
+    functions.Add("2x", Twice);
+    functions.Add("x²", Square);
+
+    for (const char* name : {"x+1", "2x", "x²"}) {
+        Say(std::string(name) + " при x = 5: " + std::to_string(functions.Get(name)(5)));
+    }
+
+    SayHeader("словари студентов и преподавателей (ключ — номер)");
+
+    Dictionary<int, Student> students;
+    students.Add(1003, {{1003, "Иванов Иван"}});
+    students.Add(1001, {{1001, "Петрова Анна"}});
+
+    Say("студент 1001: " + ValueToText(students.Get(1001)));
+
+    Dictionary<int, Teacher> teachers;
+    teachers.Add(20, {{20, "Смирнов С. С."}});
+
+    Say("преподаватель 20: " + ValueToText(teachers.Get(20)));
+    Say("всего студентов: " + std::to_string(students.GetCount()) +
+        ", есть ли 1002: " + (students.ContainsKey(1002) ? "да" : "нет"));
     Pause();
 }

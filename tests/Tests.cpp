@@ -22,5 +22,6 @@ void RunAllTests() {
     RunSubtreeTests();
     RunInterfaceTests();
     RunTypeTests();
+    RunDictionaryTests();
     std::cout << "\nВсе тесты пройдены: " << testsPassed << std::endl;
 }

@@ -1,18 +1,12 @@
 #include <complex>
-#include <functional>
 #include <string>
 
 #include "BinaryTree.hpp"
+#include "Dictionary.hpp"
 #include "Person.hpp"
 #include "Tests.hpp"
 
 namespace {
-
-struct ByModulus {
-    bool operator()(const std::complex<double>& a, const std::complex<double>& b) const {
-        return std::abs(a) < std::abs(b);
-    }
-};
 
 using Function = int (*)(int);
 
@@ -30,14 +24,11 @@ void TestDoubles() {
 }
 
 void TestComplex() {
-    BinaryTree<std::complex<double>, ByModulus> tree;
-    tree.Insert({3, 4});
-    tree.Insert({1, 0});
-    tree.Insert({0, 10});
-    assert(tree.Get(0) == std::complex<double>(1, 0));
-    assert(tree.Get(2) == std::complex<double>(0, 10));
-    auto restored = BinaryTree<std::complex<double>, ByModulus>::FromString(tree.ToString());
-    assert(restored == tree);
+    Dictionary<int, std::complex<double>> numbers;
+    numbers.Add(1, {3, 4});
+    numbers.Add(2, {1, 0});
+    assert(numbers.Get(1) == std::complex<double>(3, 4));
+    assert(numbers.GetCount() == 2);
 }
 
 void TestStrings() {
@@ -53,34 +44,28 @@ void TestStrings() {
 }
 
 void TestFunctions() {
-    BinaryTree<Function, std::less<Function>> tree;
-    for (Function f : {AddOne, Twice, Square}) {
-        tree.Insert(f);
-    }
-    assert(tree.GetCount() == 3);
-    assert(tree.Contains(Twice));
-    assert(!tree.Insert(Square));
-    int sum = tree.Reduce([](Function f, int acc) { return acc + f(5); }, 0);
-    assert(sum == 6 + 10 + 25);
-    auto chosen = tree.Where([](Function f) { return f(3) > 5; });
-    assert(chosen.GetCount() == 2 && !chosen.Contains(AddOne));
+    Dictionary<std::string, Function> functions;
+    functions.Add("x+1", AddOne);
+    functions.Add("2x", Twice);
+    functions.Add("x²", Square);
+    assert(functions.GetCount() == 3);
+    assert(functions.Get("2x")(5) == 10);
+    assert(functions.Get("x²")(5) == 25);
+    assert(!functions.ContainsKey("x³"));
 }
 
 void TestPeople() {
-    BinaryTree<Student> students;
-    students.Insert({{1003, "Иванов Иван"}});
-    students.Insert({{1001, "Петров Пётр"}});
-    students.Insert({{1002, "Сидорова Анна"}});
-    assert(students.Get(0).name == "Петров Пётр");
-    assert(students.Contains({{1002, ""}}));
-    assert(BinaryTree<Student>::FromString(students.ToString()) == students);
-    assert(Throws([] { BinaryTree<Student>::FromString("{1001}()[]"); }));
+    Dictionary<int, Student> students;
+    students.Add(1003, {{1003, "Иванов Иван"}});
+    students.Add(1001, {{1001, "Петров Пётр"}});
+    assert(students.Get(1001).name == "Петров Пётр");
+    assert(students.ContainsKey(1003) && !students.ContainsKey(1002));
 
-    BinaryTree<Teacher> teachers;
-    teachers.Insert({{20, "Смирнов С. С."}});
-    teachers.Insert({{10, "Кузнецова К. К."}});
-    assert(teachers.Get(0).name == "Кузнецова К. К.");
-    assert(BinaryTree<Teacher>::FromString(teachers.ToString()) == teachers);
+    Dictionary<int, Teacher> teachers;
+    teachers.Add(20, {{20, "Смирнов С. С."}});
+    teachers.Add(10, {{10, "Кузнецова К. К."}});
+    assert(teachers.Get(10).name == "Кузнецова К. К.");
+    assert(teachers.GetCount() == 2);
 }
 
 void TestTrackedObjects() {
@@ -105,9 +90,9 @@ void TestTrackedObjects() {
 void RunTypeTests() {
     std::cout << "Разные типы элементов\n";
     RunTest("вещественные числа", TestDoubles);
-    RunTest("комплексные числа со своим компаратором", TestComplex);
+    RunTest("комплексные числа в словаре", TestComplex);
     RunTest("строки", TestStrings);
-    RunTest("функции (указатели на функции)", TestFunctions);
-    RunTest("студенты и преподаватели", TestPeople);
+    RunTest("функции в словаре", TestFunctions);
+    RunTest("студенты и преподаватели в словаре", TestPeople);
     RunTest("объекты со счётчиком: нет утечек", TestTrackedObjects);
 }

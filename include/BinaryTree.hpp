@@ -16,25 +16,19 @@
 #include "TreeText.hpp"
 
 template <typename T>
-struct Less {
-    bool operator()(const T& a, const T& b) const { return a < b; }
-};
-
-template <typename T, typename Compare = Less<T>>
 class BinaryTree : public ICollection<T>, public IEnumerable<T> {
     using Node = TreeNode<T>;
 
 public:
-    explicit BinaryTree(Compare compare = Compare()) : root_(), compare_(compare) {}
+    BinaryTree() = default;
 
-    BinaryTree(const BinaryTree& other) : root_(Clone(other.root_.get())), compare_(other.compare_) {}
+    BinaryTree(const BinaryTree& other) : root_(Clone(other.root_.get())) {}
 
     BinaryTree(BinaryTree&& other) noexcept = default;
 
     BinaryTree& operator=(const BinaryTree& other) {
         if (this != &other) {
             root_ = Clone(other.root_.get());
-            compare_ = other.compare_;
         }
         return *this;
     }
@@ -46,6 +40,11 @@ public:
     bool Remove(const T& value) { return RemoveFrom(root_, value); }
 
     bool Contains(const T& value) const override { return FindNode(value) != nullptr; }
+
+    const T* Find(const T& value) const {
+        const Node* node = FindNode(value);
+        return node == nullptr ? nullptr : &node->value;
+    }
 
     size_t GetCount() const override { return SizeOf(root_.get()); }
 
@@ -77,14 +76,14 @@ public:
 
     template <typename F>
     BinaryTree Map(F function) const {
-        BinaryTree result(compare_);
+        BinaryTree result;
         ForEach(root_.get(), [&](const T& value) { result.Insert(function(value)); });
         return result;
     }
 
     template <typename P>
     BinaryTree Where(P predicate) const {
-        BinaryTree result(compare_);
+        BinaryTree result;
         ForEach(root_.get(), [&](const T& value) {
             if (predicate(value)) {
                 result.Insert(value);
@@ -111,7 +110,7 @@ public:
         if (node == nullptr) {
             throw std::invalid_argument("элемента «" + ValueToText(value) + "» нет в дереве");
         }
-        BinaryTree result(compare_);
+        BinaryTree result;
         result.root_ = Clone(node);
         return result;
     }
@@ -139,10 +138,9 @@ public:
     }
 
     static BinaryTree FromString(const std::string& text,
-                                 const std::string& format = kDefaultFormat,
-                                 Compare compare = Compare()) {
+                                 const std::string& format = kDefaultFormat) {
         TraversalFormat parsed(format);
-        BinaryTree result(compare);
+        BinaryTree result;
         result.root_ = TreeParser<T>(text, parsed).Parse();
         if (!result.CheckInvariants()) {
             throw std::invalid_argument("строка не задаёт сбалансированное дерево поиска");
@@ -231,9 +229,9 @@ private:
             return true;
         }
         bool inserted;
-        if (compare_(value, node->value)) {
+        if (value < node->value) {
             inserted = InsertInto(node->left, value);
-        } else if (compare_(node->value, value)) {
+        } else if (node->value < value) {
             inserted = InsertInto(node->right, value);
         } else {
             return false;
@@ -247,9 +245,9 @@ private:
             return false;
         }
         bool removed = true;
-        if (compare_(value, node->value)) {
+        if (value < node->value) {
             removed = RemoveFrom(node->left, value);
-        } else if (compare_(node->value, value)) {
+        } else if (node->value < value) {
             removed = RemoveFrom(node->right, value);
         } else if (node->left == nullptr) {
             node = std::move(node->right);
@@ -278,9 +276,9 @@ private:
     const Node* FindNode(const T& value) const {
         const Node* node = root_.get();
         while (node != nullptr) {
-            if (compare_(value, node->value)) {
+            if (value < node->value) {
                 node = node->left.get();
-            } else if (compare_(node->value, value)) {
+            } else if (node->value < value) {
                 node = node->right.get();
             } else {
                 return node;
@@ -289,7 +287,7 @@ private:
         return nullptr;
     }
 
-    bool Same(const T& a, const T& b) const { return !compare_(a, b) && !compare_(b, a); }
+    static bool Same(const T& a, const T& b) { return !(a < b) && !(b < a); }
 
     bool SameShape(const Node* a, const Node* b) const {
         if (a == nullptr || b == nullptr) {
@@ -313,7 +311,7 @@ private:
     bool IsOrdered() const {
         DynamicArray<T> values = Traverse();
         for (size_t i = 1; i < values.GetLength(); ++i) {
-            if (!compare_(values[i - 1], values[i])) {
+            if (!(values[i - 1] < values[i])) {
                 return false;
             }
         }
@@ -334,5 +332,4 @@ private:
     }
 
     std::unique_ptr<Node> root_;
-    Compare compare_;
 };

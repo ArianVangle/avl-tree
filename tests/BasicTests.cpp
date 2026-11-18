@@ -147,19 +147,6 @@ void TestMove() {
     assert(!target.Contains(9));
 }
 
-void TestCustomComparator() {
-    struct Greater {
-        bool operator()(int a, int b) const { return a > b; }
-    };
-    BinaryTree<int, Greater> tree;
-    for (int value : {1, 5, 3}) {
-        tree.Insert(value);
-    }
-    assert(tree.Get(0) == 5);
-    assert(tree.Get(2) == 1);
-    assert(tree.CheckInvariants());
-}
-
 void TestNoLeaks() {
     {
         BinaryTree<Tracked> tree;
@@ -190,6 +177,5 @@ void RunBasicTests() {
     RunTest("очистка", TestClear);
     RunTest("копия независима", TestCopyIsDeep);
     RunTest("перемещение", TestMove);
-    RunTest("свой компаратор", TestCustomComparator);
     RunTest("нет утечек", TestNoLeaks);
 }
