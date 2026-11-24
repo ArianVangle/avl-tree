@@ -8,15 +8,15 @@
 #include "TraversalFormat.hpp"
 #include "TreeNode.hpp"
 
-template <typename T>
-class TreeEnumerator : public IEnumerator<T> {
+template <typename TKey, typename TValue = Empty>
+class TreeEnumerator : public IEnumerator<TKey> {
     struct Frame {
-        const TreeNode<T>* node = nullptr;
+        const TreeNode<TKey, TValue>* node = nullptr;
         size_t part = 0;
     };
 
 public:
-    TreeEnumerator(const TreeNode<T>* root, const TraversalFormat& format)
+    TreeEnumerator(const TreeNode<TKey, TValue>* root, const TraversalFormat& format)
         : root_(root), format_(format), current_(nullptr) {
         Reset();
     }
@@ -28,13 +28,13 @@ public:
                 stack_.RemoveLast();
                 continue;
             }
-            const TreeNode<T>* node = top.node;
+            const TreeNode<TKey, TValue>* node = top.node;
             Part part = format_[top.part++].part;
             if (part == Part::Root) {
                 current_ = node;
                 return true;
             }
-            const TreeNode<T>* child = part == Part::Left ? node->left.get() : node->right.get();
+            const TreeNode<TKey, TValue>* child = part == Part::Left ? node->left.get() : node->right.get();
             if (child != nullptr) {
                 stack_.Append(Frame{child, 0});
             }
@@ -43,12 +43,9 @@ public:
         return false;
     }
 
-    const T& GetCurrent() const override {
-        if (current_ == nullptr) {
-            throw std::out_of_range("перечислитель не указывает на элемент");
-        }
-        return current_->value;
-    }
+    const TKey& GetCurrent() const override { return Current().key; }
+
+    const TValue& GetValue() const { return Current().value; }
 
     void Reset() override {
         while (!stack_.IsEmpty()) {
@@ -61,8 +58,15 @@ public:
     }
 
 private:
-    const TreeNode<T>* root_;
+    const TreeNode<TKey, TValue>& Current() const {
+        if (current_ == nullptr) {
+            throw std::out_of_range("перечислитель не указывает на элемент");
+        }
+        return *current_;
+    }
+
+    const TreeNode<TKey, TValue>* root_;
     TraversalFormat format_;
-    const TreeNode<T>* current_;
+    const TreeNode<TKey, TValue>* current_;
     DynamicArray<Frame> stack_;
 };

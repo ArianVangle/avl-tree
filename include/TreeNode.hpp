@@ -4,29 +4,33 @@
 #include <memory>
 #include <utility>
 
-template <typename T>
-struct TreeNode {
-    explicit TreeNode(T v) : value(std::move(v)), height(1), size(1) {}
+struct Empty {};
 
-    T value;
+template <typename TKey, typename TValue = Empty>
+struct TreeNode {
+    explicit TreeNode(TKey k, TValue v = TValue())
+        : key(std::move(k)), value(std::move(v)), height(1), size(1) {}
+
+    TKey key;
+    [[no_unique_address]] TValue value;
     std::unique_ptr<TreeNode> left;
     std::unique_ptr<TreeNode> right;
     int height;
     size_t size;
 };
 
-template <typename T>
-int HeightOf(const TreeNode<T>* node) {
+template <typename TKey, typename TValue>
+int HeightOf(const TreeNode<TKey, TValue>* node) {
     return node == nullptr ? 0 : node->height;
 }
 
-template <typename T>
-size_t SizeOf(const TreeNode<T>* node) {
+template <typename TKey, typename TValue>
+size_t SizeOf(const TreeNode<TKey, TValue>* node) {
     return node == nullptr ? 0 : node->size;
 }
 
-template <typename T>
-void UpdateNode(TreeNode<T>& node) {
+template <typename TKey, typename TValue>
+void UpdateNode(TreeNode<TKey, TValue>& node) {
     int left = HeightOf(node.left.get());
     int right = HeightOf(node.right.get());
     node.height = 1 + (left > right ? left : right);

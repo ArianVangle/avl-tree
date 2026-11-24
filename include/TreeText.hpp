@@ -38,15 +38,16 @@ T TextToValue(const std::string& text) {
     }
 }
 
-template <typename T>
-void VisitTree(const TreeNode<T>* node, const TraversalFormat& format, DynamicArray<T>& out) {
+template <typename TKey, typename TValue>
+void VisitTree(const TreeNode<TKey, TValue>* node, const TraversalFormat& format,
+               DynamicArray<TKey>& out) {
     if (node == nullptr) {
         return;
     }
     for (size_t i = 0; i < 3; ++i) {
         switch (format[i].part) {
             case Part::Root:
-                out.Append(node->value);
+                out.Append(node->key);
                 break;
             case Part::Left:
                 VisitTree(node->left.get(), format, out);
@@ -71,15 +72,16 @@ std::string CheckedText(const T& value, const FormatPart& part) {
     return text;
 }
 
-template <typename T>
-void WriteTree(const TreeNode<T>* node, const TraversalFormat& format, std::string& out) {
+template <typename TKey, typename TValue>
+void WriteTree(const TreeNode<TKey, TValue>* node, const TraversalFormat& format,
+               std::string& out) {
     for (size_t i = 0; i < 3; ++i) {
         const FormatPart& part = format[i];
         out += part.open;
         if (part.part == Part::Root) {
-            out += CheckedText(node->value, part);
+            out += CheckedText(node->key, part);
         } else {
-            const TreeNode<T>* child =
+            const TreeNode<TKey, TValue>* child =
                 part.part == Part::Left ? node->left.get() : node->right.get();
             if (child != nullptr) {
                 WriteTree(child, format, out);
@@ -89,18 +91,18 @@ void WriteTree(const TreeNode<T>* node, const TraversalFormat& format, std::stri
     }
 }
 
-template <typename T>
+template <typename TKey, typename TValue>
 class TreeParser {
 public:
     TreeParser(const std::string& text, const TraversalFormat& format)
         : text_(text), format_(format), pos_(0) {}
 
-    std::unique_ptr<TreeNode<T>> Parse() {
+    std::unique_ptr<TreeNode<TKey, TValue>> Parse() {
         SkipSpaces();
         if (pos_ == text_.size()) {
             return nullptr;
         }
-        std::unique_ptr<TreeNode<T>> root = ParseNode();
+        std::unique_ptr<TreeNode<TKey, TValue>> root = ParseNode();
         SkipSpaces();
         if (pos_ != text_.size()) {
             Fail("лишние символы");
@@ -109,18 +111,18 @@ public:
     }
 
 private:
-    std::unique_ptr<TreeNode<T>> ParseNode() {
-        std::unique_ptr<T> value;
-        std::unique_ptr<TreeNode<T>> left;
-        std::unique_ptr<TreeNode<T>> right;
+    std::unique_ptr<TreeNode<TKey, TValue>> ParseNode() {
+        std::unique_ptr<TKey> key;
+        std::unique_ptr<TreeNode<TKey, TValue>> left;
+        std::unique_ptr<TreeNode<TKey, TValue>> right;
         for (size_t i = 0; i < 3; ++i) {
             const FormatPart& part = format_[i];
             SkipSpaces();
             Expect(part.open);
             if (part.part == Part::Root) {
-                value = std::make_unique<T>(ReadValue(part.close));
+                key = std::make_unique<TKey>(ReadKey(part.close));
             } else {
-                std::unique_ptr<TreeNode<T>>& child = part.part == Part::Left ? left : right;
+                std::unique_ptr<TreeNode<TKey, TValue>>& child = part.part == Part::Left ? left : right;
                 SkipSpaces();
                 if (pos_ < text_.size() && text_[pos_] != part.close) {
                     child = ParseNode();
@@ -129,14 +131,14 @@ private:
             }
             Expect(part.close);
         }
-        auto node = std::make_unique<TreeNode<T>>(std::move(*value));
+        auto node = std::make_unique<TreeNode<TKey, TValue>>(std::move(*key));
         node->left = std::move(left);
         node->right = std::move(right);
         UpdateNode(*node);
         return node;
     }
 
-    T ReadValue(char close) {
+    TKey ReadKey(char close) {
         size_t end = text_.find(close, pos_);
         if (end == std::string::npos) {
             Fail("не закрыто значение");
@@ -146,7 +148,7 @@ private:
             Fail("пустое значение");
         }
         pos_ = end;
-        return TextToValue<T>(raw);
+        return TextToValue<TKey>(raw);
     }
 
     void Expect(char symbol) {

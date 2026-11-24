@@ -15,9 +15,9 @@
 #include "TreeNode.hpp"
 #include "TreeText.hpp"
 
-template <typename T>
-class BinaryTree : public ICollection<T>, public IEnumerable<T> {
-    using Node = TreeNode<T>;
+template <typename TKey, typename TValue = Empty>
+class BinaryTree : public ICollection<TKey>, public IEnumerable<TKey> {
+    using Node = TreeNode<TKey, TValue>;
 
 public:
     BinaryTree() = default;
@@ -35,20 +35,22 @@ public:
 
     BinaryTree& operator=(BinaryTree&& other) noexcept = default;
 
-    bool Insert(const T& value) { return InsertInto(root_, value); }
+    bool Insert(const TKey& key, TValue value = TValue()) {
+        return InsertInto(root_, key, std::move(value));
+    }
 
-    bool Remove(const T& value) { return RemoveFrom(root_, value); }
+    bool Remove(const TKey& key) { return RemoveFrom(root_, key); }
 
-    bool Contains(const T& value) const override { return FindNode(value) != nullptr; }
+    bool Contains(const TKey& key) const override { return FindNode(key) != nullptr; }
 
-    const T* Find(const T& value) const {
-        const Node* node = FindNode(value);
+    const TValue* Find(const TKey& key) const {
+        const Node* node = FindNode(key);
         return node == nullptr ? nullptr : &node->value;
     }
 
     size_t GetCount() const override { return SizeOf(root_.get()); }
 
-    const T& Get(size_t index) const override {
+    const TKey& Get(size_t index) const override {
         if (index >= GetCount()) {
             throw std::out_of_range("индекс вне диапазона: " + std::to_string(index));
         }
@@ -58,7 +60,7 @@ public:
             if (index < leftSize) {
                 node = node->left.get();
             } else if (index == leftSize) {
-                return node->value;
+                return node->key;
             } else {
                 index -= leftSize + 1;
                 node = node->right.get();
@@ -66,12 +68,12 @@ public:
         }
     }
 
-    std::unique_ptr<IEnumerator<T>> GetEnumerator() const override {
+    std::unique_ptr<IEnumerator<TKey>> GetEnumerator() const override {
         return GetEnumerator("(Л){К}[П]");
     }
 
-    std::unique_ptr<IEnumerator<T>> GetEnumerator(const std::string& format) const {
-        return std::make_unique<TreeEnumerator<T>>(root_.get(), TraversalFormat(format));
+    std::unique_ptr<TreeEnumerator<TKey, TValue>> GetEnumerator(const std::string& format) const {
+        return std::make_unique<TreeEnumerator<TKey, TValue>>(root_.get(), TraversalFormat(format));
     }
 
     bool IsEmpty() const { return root_ == nullptr; }
@@ -81,16 +83,16 @@ public:
     template <typename F>
     BinaryTree Map(F function) const {
         BinaryTree result;
-        ForEach(root_.get(), [&](const T& value) { result.Insert(function(value)); });
+        ForEach(root_.get(), [&](const Node& node) { result.Insert(function(node.key)); });
         return result;
     }
 
     template <typename P>
     BinaryTree Where(P predicate) const {
         BinaryTree result;
-        ForEach(root_.get(), [&](const T& value) {
-            if (predicate(value)) {
-                result.Insert(value);
+        ForEach(root_.get(), [&](const Node& node) {
+            if (predicate(node.key)) {
+                result.Insert(node.key, node.value);
             }
         });
         return result;
@@ -99,20 +101,21 @@ public:
     template <typename A, typename F>
     A Reduce(F function, A start) const {
         A accumulator = std::move(start);
-        ForEach(root_.get(), [&](const T& value) { accumulator = function(value, accumulator); });
+        ForEach(root_.get(),
+                [&](const Node& node) { accumulator = function(node.key, accumulator); });
         return accumulator;
     }
 
     BinaryTree Merge(const BinaryTree& other) const {
         BinaryTree result(*this);
-        ForEach(other.root_.get(), [&](const T& value) { result.Insert(value); });
+        ForEach(other.root_.get(), [&](const Node& node) { result.Insert(node.key, node.value); });
         return result;
     }
 
-    BinaryTree Subtree(const T& value) const {
-        const Node* node = FindNode(value);
+    BinaryTree Subtree(const TKey& key) const {
+        const Node* node = FindNode(key);
         if (node == nullptr) {
-            throw std::invalid_argument("элемента «" + ValueToText(value) + "» нет в дереве");
+            throw std::invalid_argument("элемента «" + ValueToText(key) + "» нет в дереве");
         }
         BinaryTree result;
         result.root_ = Clone(node);
@@ -123,11 +126,11 @@ public:
         if (other.IsEmpty()) {
             return true;
         }
-        return SameShape(FindNode(other.root_->value), other.root_.get());
+        return SameShape(FindNode(other.root_->key), other.root_.get());
     }
 
-    DynamicArray<T> Traverse(const std::string& format = "(Л){К}[П]") const {
-        DynamicArray<T> result;
+    DynamicArray<TKey> Traverse(const std::string& format = "(Л){К}[П]") const {
+        DynamicArray<TKey> result;
         VisitTree(root_.get(), TraversalFormat(format), result);
         return result;
     }
@@ -145,7 +148,7 @@ public:
                                  const std::string& format = kDefaultFormat) {
         TraversalFormat parsed(format);
         BinaryTree result;
-        result.root_ = TreeParser<T>(text, parsed).Parse();
+        result.root_ = TreeParser<TKey, TValue>(text, parsed).Parse();
         if (!result.CheckInvariants()) {
             throw std::invalid_argument("строка не задаёт сбалансированное дерево поиска");
         }
@@ -160,8 +163,8 @@ public:
         if (a.GetCount() != b.GetCount()) {
             return false;
         }
-        DynamicArray<T> left = a.Traverse();
-        DynamicArray<T> right = b.Traverse();
+        DynamicArray<TKey> left = a.Traverse();
+        DynamicArray<TKey> right = b.Traverse();
         for (size_t i = 0; i < left.GetLength(); ++i) {
             if (!a.Same(left[i], right[i])) {
                 return false;
@@ -185,7 +188,7 @@ private:
             return;
         }
         ForEach(node->left.get(), action);
-        action(node->value);
+        action(*node);
         ForEach(node->right.get(), action);
     }
 
@@ -227,16 +230,16 @@ private:
         }
     }
 
-    bool InsertInto(std::unique_ptr<Node>& node, const T& value) {
+    bool InsertInto(std::unique_ptr<Node>& node, const TKey& key, TValue&& value) {
         if (node == nullptr) {
-            node = std::make_unique<Node>(value);
+            node = std::make_unique<Node>(key, std::move(value));
             return true;
         }
         bool inserted;
-        if (value < node->value) {
-            inserted = InsertInto(node->left, value);
-        } else if (node->value < value) {
-            inserted = InsertInto(node->right, value);
+        if (key < node->key) {
+            inserted = InsertInto(node->left, key, std::move(value));
+        } else if (node->key < key) {
+            inserted = InsertInto(node->right, key, std::move(value));
         } else {
             return false;
         }
@@ -244,21 +247,21 @@ private:
         return inserted;
     }
 
-    bool RemoveFrom(std::unique_ptr<Node>& node, const T& value) {
+    bool RemoveFrom(std::unique_ptr<Node>& node, const TKey& key) {
         if (node == nullptr) {
             return false;
         }
         bool removed = true;
-        if (value < node->value) {
-            removed = RemoveFrom(node->left, value);
-        } else if (node->value < value) {
-            removed = RemoveFrom(node->right, value);
+        if (key < node->key) {
+            removed = RemoveFrom(node->left, key);
+        } else if (node->key < key) {
+            removed = RemoveFrom(node->right, key);
         } else if (node->left == nullptr) {
             node = std::move(node->right);
         } else if (node->right == nullptr) {
             node = std::move(node->left);
         } else {
-            node->value = TakeMin(node->right);
+            TakeMin(node->right, *node);
         }
         if (node != nullptr) {
             Rebalance(node);
@@ -266,23 +269,24 @@ private:
         return removed;
     }
 
-    static T TakeMin(std::unique_ptr<Node>& node) {
+    static void TakeMin(std::unique_ptr<Node>& node, Node& target) {
         if (node->left == nullptr) {
-            T value = std::move(node->value);
+            target.key = std::move(node->key);
+            target.value = std::move(node->value);
             node = std::move(node->right);
-            return value;
+            return;
         }
-        T value = TakeMin(node->left);
+        TakeMin(node->left, target);
         Rebalance(node);
-        return value;
     }
 
-    const Node* FindNode(const T& value) const {
+protected:
+    const Node* FindNode(const TKey& key) const {
         const Node* node = root_.get();
         while (node != nullptr) {
-            if (value < node->value) {
+            if (key < node->key) {
                 node = node->left.get();
-            } else if (node->value < value) {
+            } else if (node->key < key) {
                 node = node->right.get();
             } else {
                 return node;
@@ -291,13 +295,14 @@ private:
         return nullptr;
     }
 
-    static bool Same(const T& a, const T& b) { return !(a < b) && !(b < a); }
+private:
+    static bool Same(const TKey& a, const TKey& b) { return !(a < b) && !(b < a); }
 
     bool SameShape(const Node* a, const Node* b) const {
         if (a == nullptr || b == nullptr) {
             return a == b;
         }
-        return Same(a->value, b->value) && SameShape(a->left.get(), b->left.get()) &&
+        return Same(a->key, b->key) && SameShape(a->left.get(), b->left.get()) &&
                SameShape(a->right.get(), b->right.get());
     }
 
@@ -305,7 +310,7 @@ private:
         if (node == nullptr) {
             return nullptr;
         }
-        auto copy = std::make_unique<Node>(node->value);
+        auto copy = std::make_unique<Node>(node->key, node->value);
         copy->left = Clone(node->left.get());
         copy->right = Clone(node->right.get());
         UpdateNode(*copy);
@@ -313,7 +318,7 @@ private:
     }
 
     bool IsOrdered() const {
-        DynamicArray<T> values = Traverse();
+        DynamicArray<TKey> values = Traverse();
         for (size_t i = 1; i < values.GetLength(); ++i) {
             if (!(values[i - 1] < values[i])) {
                 return false;
@@ -337,3 +342,6 @@ private:
 
     std::unique_ptr<Node> root_;
 };
+
+template <typename T>
+using Set = BinaryTree<T>;

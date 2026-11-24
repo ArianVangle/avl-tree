@@ -1,6 +1,6 @@
 # Лабораторная работа №1. Сбалансированное дерево поиска (AVL)
 
-Шаблонное AVL-дерево `BinaryTree<T>` и словарь `Dictionary<TKey, TValue>` поверх него. Дизайн решения в [DESIGN.md](DESIGN.md).
+Шаблонное AVL-дерево `BinaryTree<TKey, TValue>`: без значений (`TValue = Empty`) это множество `Set<T>`, со значениями — словарь `Dictionary<TKey, TValue>`. Дизайн решения в [DESIGN.md](DESIGN.md).
 
 ## Выбранные составляющие
 
@@ -36,9 +36,9 @@ python3 scripts/plot.py            # график по results/results.csv
 ## Структура
 
 ```
-include/   BinaryTree.hpp      — дерево
-           Dictionary.hpp      — словарь поверх дерева
-           TreeNode.hpp        — узел
+include/   BinaryTree.hpp      — дерево BinaryTree<TKey, TValue>, множество Set<T>
+           Dictionary.hpp      — словарь: дерево со значениями + IDictionary
+           TreeNode.hpp        — узел: ключ, значение, потомки, высота, размер
            TreeEnumerator.hpp  — перечислитель в любом порядке
            TreeText.hpp        — запись в строку и чтение
            TraversalFormat.hpp — строка форматирования
@@ -57,8 +57,22 @@ results/   results.csv, time.png
 
 | Тип | Где хранится |
 |---|---|
-| целые, вещественные числа, строки | `BinaryTree<T>` — порядок по `operator<` |
-| комплексные числа, функции, студенты, преподаватели | `Dictionary<TKey, TValue>` — значение по ключу с порядком (студенты — по номеру зачётки) |
+| целые, вещественные числа, строки | ключи `Set<T>` и `Dictionary` — порядок по `operator<` |
+| комплексные числа, функции, студенты, преподаватели | значения `Dictionary<TKey, TValue>` — по ключу с порядком (студенты — по номеру зачётки) |
+
+## Множество и словарь
+
+```cpp
+Set<int> set;                                     // = BinaryTree<int>
+set.Insert(3); set.Insert(1); set.Insert(2);
+
+Dictionary<int, int> squares(set, [](int x) { return x * x; });
+squares.Get(3);                                   // 9
+Set<int> keys = squares.Keys();                   // снова {1, 2, 3}
+
+auto it = squares.GetEnumerator("{К}(Л)[П]");     // прямой обход
+while (it->MoveNext()) { it->GetCurrent(); it->GetValue(); }
+```
 
 ## Замеры
 
@@ -87,7 +101,8 @@ results/   results.csv, time.png
 
 ## Ограничения
 
-- Элементы дерева и ключи словаря уникальны.
+- Ключи уникальны.
 - Перечислитель недействителен после изменения дерева.
 - Элемент в строке не должен содержать закрывающую скобку корня выбранного формата.
-- Функции нельзя сохранить в строку и прочитать обратно.
+- В строку записываются только ключи; значения словаря (в том числе функции) не записываются.
+- `==` сравнивает множества ключей.

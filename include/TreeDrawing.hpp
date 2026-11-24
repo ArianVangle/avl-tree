@@ -10,20 +10,20 @@
 
 using TextGrid = DynamicArray<DynamicArray<std::string>>;
 
-template <typename T>
-size_t WidestValue(const TreeNode<T>* node) {
+template <typename TKey, typename TValue>
+size_t WidestValue(const TreeNode<TKey, TValue>* node) {
     if (node == nullptr) {
         return 0;
     }
-    size_t own = ValueToText(node->value).size();
+    size_t own = ValueToText(node->key).size();
     size_t left = WidestValue(node->left.get());
     size_t right = WidestValue(node->right.get());
     size_t widest = own > left ? own : left;
     return widest > right ? widest : right;
 }
 
-template <typename T>
-size_t PlaceNode(const TreeNode<T>* node, size_t depth, size_t cell, size_t& column,
+template <typename TKey, typename TValue>
+size_t PlaceNode(const TreeNode<TKey, TValue>* node, size_t depth, size_t cell, size_t& column,
                  TextGrid& grid) {
     bool hasLeft = node->left != nullptr;
     bool hasRight = node->right != nullptr;
@@ -32,7 +32,7 @@ size_t PlaceNode(const TreeNode<T>* node, size_t depth, size_t cell, size_t& col
     ++column;
     size_t right = hasRight ? PlaceNode(node->right.get(), depth + 1, cell, column, grid) : 0;
 
-    std::string text = ValueToText(node->value);
+    std::string text = ValueToText(node->key);
     size_t start = x - (text.size() - 1) / 2;
     for (size_t i = 0; i < text.size(); ++i) {
         grid[2 * depth][start + i] = std::string(1, text[i]);
@@ -57,8 +57,8 @@ size_t PlaceNode(const TreeNode<T>* node, size_t depth, size_t cell, size_t& col
     return x;
 }
 
-template <typename T>
-std::string DrawTree(const TreeNode<T>* root, size_t maxWidth) {
+template <typename TKey, typename TValue>
+std::string DrawTree(const TreeNode<TKey, TValue>* root, size_t maxWidth) {
     if (root == nullptr) {
         return "";
     }

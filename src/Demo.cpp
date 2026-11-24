@@ -72,5 +72,22 @@ void DemoTypes() {
     Say("преподаватель 20: " + ValueToText(teachers.Get(20)));
     Say("всего студентов: " + std::to_string(students.GetCount()) +
         ", есть ли 1002: " + (students.ContainsKey(1002) ? "да" : "нет"));
+
+    SayHeader("множество → словарь → множество");
+
+    Set<int> set;
+    for (int x : {4, 2, 6, 1, 3}) {
+        set.Insert(x);
+    }
+    Dictionary<int, int> squares(set, [](int x) { return x * x; });
+    Say("множество: " + set.ToString());
+    auto enumerator = squares.GetEnumerator("(Л){К}[П]");
+    std::string pairs;
+    while (enumerator->MoveNext()) {
+        pairs += std::to_string(enumerator->GetCurrent()) + "→" +
+                 std::to_string(enumerator->GetValue()) + " ";
+    }
+    Say("словарь x → x²: " + pairs);
+    Say(std::string("ключи словаря равны множеству: ") + (squares.Keys() == set ? "да" : "нет"));
     Pause();
 }
