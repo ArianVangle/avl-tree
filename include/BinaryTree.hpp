@@ -67,7 +67,11 @@ public:
     }
 
     std::unique_ptr<IEnumerator<T>> GetEnumerator() const override {
-        return std::make_unique<TreeEnumerator<T>>(root_.get());
+        return GetEnumerator("(Л){К}[П]");
+    }
+
+    std::unique_ptr<IEnumerator<T>> GetEnumerator(const std::string& format) const {
+        return std::make_unique<TreeEnumerator<T>>(root_.get(), TraversalFormat(format));
     }
 
     bool IsEmpty() const { return root_ == nullptr; }

@@ -16,7 +16,7 @@
 | 1.6 | Извлечение поддерева по заданному корню | 2 | `Subtree` |
 | 1.7 | Поиск на вхождение поддерева | 3 | `ContainsSubtree` |
 | 7.1 | `ICollection` | 2 | `GetCount`, `Contains`, `Get(index)` |
-| 7.2 | `IEnumerable`, перечислитель дерева | 3 | `GetEnumerator`, `TreeEnumerator` |
+| 7.2 | `IEnumerable`, перечислитель дерева в любом из шести порядков | 3 | `GetEnumerator(format)`, `TreeEnumerator` |
 | 7.3 | Перегрузка операторов | 2 | `==`, `!=`, `+`, `<<` |
 | | **Итого** | **31** | минимум 25 |
 
@@ -39,7 +39,7 @@ python3 scripts/plot.py            # график по results/results.csv
 include/   BinaryTree.hpp      — дерево
            Dictionary.hpp      — словарь поверх дерева
            TreeNode.hpp        — узел
-           TreeEnumerator.hpp  — перечислитель
+           TreeEnumerator.hpp  — перечислитель в любом порядке
            TreeText.hpp        — запись в строку и чтение
            TraversalFormat.hpp — строка форматирования
            TreeDrawing.hpp     — рисунок дерева для меню

@@ -16,7 +16,8 @@ namespace {
 
 using Tree = BinaryTree<long long>;
 
-const size_t kDrawWidth = 96;
+const size_t kDrawWidth = 100;
+const char* const kAscending = "(Л){К}[П]";
 bool inputClosed = false;
 
 bool ReadLine(const std::string& prompt, std::string& line) {
@@ -134,13 +135,14 @@ DynamicArray<std::string> MenuLines(const Tree& tree) {
     lines.Append(Item("8", "В строку", "по формату, например {К}(Л)[П]"));
     lines.Append(Item("9", "Из строки", "прочитать дерево"));
     lines.Append(Item("10", "Поддерево", "извлечь и найти вхождение"));
+    lines.Append(Item("11", "Перебор", "перечислитель в любом из шести порядков"));
     lines.Append("");
     lines.Append(Section("ПРОВЕРКИ"));
-    lines.Append(Item("11", "Другие типы", "вещественные, комплексные, строки, функции, люди"));
-    lines.Append(Item("12", "Тесты", "все блоки, 52 теста"));
-    lines.Append(Item("13", "Нагрузка", "быстрый тест, от 10 000 до 100 000 элементов"));
-    lines.Append(Item("14", "Нагрузка", "полный тест, от 10 000 до 10 000 000"));
-    lines.Append(Item("15", "Графики", "построить по results/results.csv"));
+    lines.Append(Item("12", "Другие типы", "вещественные, комплексные, строки, функции, люди"));
+    lines.Append(Item("13", "Тесты", "все блоки"));
+    lines.Append(Item("14", "Нагрузка", "быстрый тест, от 10 000 до 100 000 элементов"));
+    lines.Append(Item("15", "Нагрузка", "полный тест, от 10 000 до 10 000 000"));
+    lines.Append(Item("16", "Графики", "построить по results/results.csv"));
     lines.Append("");
     lines.Append(Item("0", "Выход", ""));
     lines.Append("");
@@ -373,6 +375,29 @@ void ScreenSubtree(const Tree& tree) {
     Pause();
 }
 
+void ScreenEnumerate(const Tree& tree) {
+    DrawWindow("Перебор перечислителем");
+    ShowTree(tree, "Дерево");
+    SayNote("формат — К, Л, П в скобках, например {К}(Л)[П] или [П]{К}(Л)");
+    std::string format;
+    if (ReadLine(std::string("порядок обхода [") + kAscending + "]: ", format)) {
+        if (format.empty()) {
+            format = kAscending;
+        }
+        try {
+            auto enumerator = tree.GetEnumerator(format);
+            DynamicArray<long long> values;
+            while (enumerator->MoveNext()) {
+                values.Append(enumerator->GetCurrent());
+            }
+            Say(TraversalFormat(format).Order() + ": " + Join(values, 40));
+        } catch (const std::exception& error) {
+            SayError(error.what());
+        }
+    }
+    Pause();
+}
+
 void PrintMenu(const std::string& hint, const Tree& tree) {
     DrawBox("Дерево поиска (AVL) · лабораторная работа №1", MenuLines(tree));
     if (!hint.empty()) {
@@ -425,14 +450,16 @@ bool HandleChoice(const std::string& choice, Tree& tree) {
     } else if (choice == "10") {
         ScreenSubtree(tree);
     } else if (choice == "11") {
-        DemoTypes();
+        ScreenEnumerate(tree);
     } else if (choice == "12") {
-        ShowTests();
+        DemoTypes();
     } else if (choice == "13") {
-        ShowBenchmark(BenchmarkMode::Quick);
+        ShowTests();
     } else if (choice == "14") {
-        ShowBenchmark(BenchmarkMode::Full);
+        ShowBenchmark(BenchmarkMode::Quick);
     } else if (choice == "15") {
+        ShowBenchmark(BenchmarkMode::Full);
+    } else if (choice == "16") {
         RunCommand("Графики", "python3 scripts/plot.py");
     } else {
         return false;
@@ -458,7 +485,7 @@ void RunUi() {
         if (inputClosed) {
             break;
         }
-        hint = known ? "" : "Нет пункта «" + choice + "», введите число от 0 до 15";
+        hint = known ? "" : "Нет пункта «" + choice + "», введите число от 0 до 16";
     }
     ClearScreen();
     std::cout.flush();

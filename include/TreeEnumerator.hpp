@@ -1,27 +1,46 @@
 #pragma once
 
+#include <cstddef>
 #include <stdexcept>
 
 #include "DynamicArray.hpp"
 #include "Interfaces.hpp"
+#include "TraversalFormat.hpp"
 #include "TreeNode.hpp"
 
 template <typename T>
 class TreeEnumerator : public IEnumerator<T> {
+    struct Frame {
+        const TreeNode<T>* node = nullptr;
+        size_t part = 0;
+    };
+
 public:
-    explicit TreeEnumerator(const TreeNode<T>* root) : root_(root), current_(nullptr) {
+    TreeEnumerator(const TreeNode<T>* root, const TraversalFormat& format)
+        : root_(root), format_(format), current_(nullptr) {
         Reset();
     }
 
     bool MoveNext() override {
-        if (stack_.IsEmpty()) {
-            current_ = nullptr;
-            return false;
+        while (!stack_.IsEmpty()) {
+            Frame& top = stack_.Last();
+            if (top.part == 3) {
+                stack_.RemoveLast();
+                continue;
+            }
+            const TreeNode<T>* node = top.node;
+            Part part = format_[top.part++].part;
+            if (part == Part::Root) {
+                current_ = node;
+                return true;
+            }
+            const TreeNode<T>* child = part == Part::Left ? node->left.get() : node->right.get();
+            if (child != nullptr) {
+                stack_.Append(Frame{child, 0});
+            }
         }
-        current_ = stack_.Last();
-        stack_.RemoveLast();
-        PushLeft(current_->right.get());
-        return true;
+        current_ = nullptr;
+        return false;
     }
 
     const T& GetCurrent() const override {
@@ -36,18 +55,14 @@ public:
             stack_.RemoveLast();
         }
         current_ = nullptr;
-        PushLeft(root_);
-    }
-
-private:
-    void PushLeft(const TreeNode<T>* node) {
-        while (node != nullptr) {
-            stack_.Append(node);
-            node = node->left.get();
+        if (root_ != nullptr) {
+            stack_.Append(Frame{root_, 0});
         }
     }
 
+private:
     const TreeNode<T>* root_;
+    TraversalFormat format_;
     const TreeNode<T>* current_;
-    DynamicArray<const TreeNode<T>*> stack_;
+    DynamicArray<Frame> stack_;
 };

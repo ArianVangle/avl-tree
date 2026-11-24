@@ -52,6 +52,39 @@ void TestEnumeratorOnEmpty() {
     assert(Throws([&] { enumerator->GetCurrent(); }));
 }
 
+void TestEnumeratorAllOrders() {
+    IntTree tree;
+    for (int i = 0; i < 40; ++i) {
+        tree.Insert((i * 17) % 40);
+    }
+    for (const char* format : kAllFormats) {
+        DynamicArray<int> expected = tree.Traverse(format);
+        auto enumerator = tree.GetEnumerator(format);
+        for (int round = 0; round < 2; ++round) {
+            size_t i = 0;
+            while (enumerator->MoveNext()) {
+                assert(enumerator->GetCurrent() == expected[i]);
+                ++i;
+            }
+            assert(i == expected.GetLength());
+            enumerator->Reset();
+        }
+    }
+}
+
+void TestEnumeratorPreorder() {
+    IntTree tree = MakeTree({2, 1, 3});
+    auto enumerator = tree.GetEnumerator("{К}(Л)[П]");
+    int expected[] = {2, 1, 3};
+    for (int value : expected) {
+        assert(enumerator->MoveNext() && enumerator->GetCurrent() == value);
+    }
+    assert(!enumerator->MoveNext());
+    assert(Throws([&] { enumerator->GetCurrent(); }));
+    assert(!IntTree().GetEnumerator("[П](Л){К}")->MoveNext());
+    assert(Throws([&] { tree.GetEnumerator("{К}(К)[П]"); }));
+}
+
 void TestEquality() {
     IntTree a = MakeTree({1, 2, 3});
     IntTree b = MakeTree({3, 2, 1});
@@ -94,6 +127,8 @@ void RunInterfaceTests() {
     RunTest("Get(k) на 1000 элементах", TestGetByIndexLarge);
     RunTest("IEnumerator: обход, конец, Reset", TestEnumerator);
     RunTest("IEnumerator на пустом дереве", TestEnumeratorOnEmpty);
+    RunTest("перечислитель во всех шести порядках", TestEnumeratorAllOrders);
+    RunTest("перечислитель: прямой обход, неверный формат", TestEnumeratorPreorder);
     RunTest("операторы == и !=", TestEquality);
     RunTest("оператор + (слияние)", TestMergeOperator);
     RunTest("шесть обходов", TestTraversals);
